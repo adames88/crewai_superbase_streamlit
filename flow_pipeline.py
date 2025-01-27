@@ -17,6 +17,12 @@ from email.message import EmailMessage
 import agentops
 #agentops.init("10d2ae41-41a5-468a-a0da-b0ab4225a8b0",skip_auto_end_session=True)
 
+from helper import load_env, get_supabase_url, get_supabase_key
+load_env()
+
+url: str = get_supabase_url()
+key: str = get_supabase_key()
+
 from supabase_tools import (
     supabase_get_row_tool, 
     supabase_get_all_rows_tool, 
@@ -84,78 +90,75 @@ for config_type, file_path in files.items():
 agents_config = configs['agents']
 tasks_config = configs['tasks']
 
-class StreamToExpander:
-    def __init__(self, expander):
-        self.expander = expander
-        self.buffer = []
-        self.colors = ['red', 'green', 'blue', 'orange', "yellow","pink", "gray"]  # Define a list of colors
-        self.color_index = 0  # Initialize color index
+# class StreamToExpander:
+#     def __init__(self, expander):
+#         self.expander = expander
+#         self.buffer = []
+#         self.colors = ['red', 'green', 'blue', 'orange', "yellow","pink", "gray"]  # Define a list of colors
+#         self.color_index = 0  # Initialize color index
 
-    def write(self, data):
-        # Filter out ANSI escape codes using a regular expression
-        cleaned_data = re.sub(r'\x1B\[[0-9;]*[mK]', '', data)
+#     def write(self, data):
+#         # Filter out ANSI escape codes using a regular expression
+#         cleaned_data = re.sub(r'\x1B\[[0-9;]*[mK]', '', data)
 
-        # Check if the data contains 'task' information
-        task_match_object = re.search(r'\"task\"\s*:\s*\"(.*?)\"', cleaned_data, re.IGNORECASE)
-        task_match_input = re.search(r'task\s*:\s*([^\n]*)', cleaned_data, re.IGNORECASE)
-        task_value = None
-        if task_match_object:
-            task_value = task_match_object.group(1)
-        elif task_match_input:
-            task_value = task_match_input.group(1).strip()
+#         # Check if the data contains 'task' information
+#         task_match_object = re.search(r'\"task\"\s*:\s*\"(.*?)\"', cleaned_data, re.IGNORECASE)
+#         task_match_input = re.search(r'task\s*:\s*([^\n]*)', cleaned_data, re.IGNORECASE)
+#         task_value = None
+#         if task_match_object:
+#             task_value = task_match_object.group(1)
+#         elif task_match_input:
+#             task_value = task_match_input.group(1).strip()
 
-        if task_value:
-            st.toast(":robot_face: " + task_value)
+#         if task_value:
+#             st.toast(":robot_face: " + task_value)
 
-        # Check if the text contains the specified phrase and apply color
-        if "Entering new CrewAgentExecutor chain" in cleaned_data:
-            # Apply different color and switch color index
-            self.color_index = (self.color_index + 1) % len(self.colors)  # Increment color index and wrap around if necessary
+#         # Check if the text contains the specified phrase and apply color
+#         if "Entering new CrewAgentExecutor chain" in cleaned_data:
+#             # Apply different color and switch color index
+#             self.color_index = (self.color_index + 1) % len(self.colors)  # Increment color index and wrap around if necessary
 
-            cleaned_data = cleaned_data.replace("Entering new CrewAgentExecutor chain", f":{self.colors[self.color_index]}[Entering new CrewAgentExecutor chain]")
+#             cleaned_data = cleaned_data.replace("Entering new CrewAgentExecutor chain", f":{self.colors[self.color_index]}[Entering new CrewAgentExecutor chain]")
 
-        if "Lead Data Specialistt" in cleaned_data:
-            # Apply different color 
-            cleaned_data = cleaned_data.replace("Lead Data Specialist", f":{self.colors[self.color_index]}[Lead Data Specialist]")
-            self.color_index = (self.color_index + 1) % len(self.colors)
-        if "Cultural Fit Analyst" in cleaned_data:
-            cleaned_data = cleaned_data.replace("Cultural Fit Analyst", f":{self.colors[self.color_index]}[Cultural Fit Analyst]")
-            self.color_index = (self.color_index + 1) % len(self.colors)
-        if "Lead Scorer and Validator" in cleaned_data:
-            cleaned_data = cleaned_data.replace("Lead Scorer and Validator", f":{self.colors[self.color_index]}[Lead Scorer and Validator]")
-            self.color_index = (self.color_index + 1) % len(self.colors)
-        if "Email Content Writer" in cleaned_data:
-            cleaned_data = cleaned_data.replace("Email Content Writer", f":{self.colors[self.color_index]}[Email Content Writer]")
-            self.color_index = (self.color_index + 1) % len(self.colors)
-        if "Engagement Optimization Specialist" in cleaned_data:
-            cleaned_data = cleaned_data.replace("Engagement Optimization Specialist", f":{self.colors[self.color_index]}[Engagement Optimization Specialist]")
-            self.color_index = (self.color_index + 1) % len(self.colors)
-        if "Finished chain." in cleaned_data:
-            cleaned_data = cleaned_data.replace("Finished chain.", f":{self.colors[self.color_index]}[Finished chain.]")
-            self.color_index = (self.color_index + 1) % len(self.colors)
+#         if "Lead Data Specialistt" in cleaned_data:
+#             # Apply different color 
+#             cleaned_data = cleaned_data.replace("Lead Data Specialist", f":{self.colors[self.color_index]}[Lead Data Specialist]")
+#             self.color_index = (self.color_index + 1) % len(self.colors)
+#         if "Cultural Fit Analyst" in cleaned_data:
+#             cleaned_data = cleaned_data.replace("Cultural Fit Analyst", f":{self.colors[self.color_index]}[Cultural Fit Analyst]")
+#             self.color_index = (self.color_index + 1) % len(self.colors)
+#         if "Lead Scorer and Validator" in cleaned_data:
+#             cleaned_data = cleaned_data.replace("Lead Scorer and Validator", f":{self.colors[self.color_index]}[Lead Scorer and Validator]")
+#             self.color_index = (self.color_index + 1) % len(self.colors)
+#         if "Email Content Writer" in cleaned_data:
+#             cleaned_data = cleaned_data.replace("Email Content Writer", f":{self.colors[self.color_index]}[Email Content Writer]")
+#             self.color_index = (self.color_index + 1) % len(self.colors)
+#         if "Engagement Optimization Specialist" in cleaned_data:
+#             cleaned_data = cleaned_data.replace("Engagement Optimization Specialist", f":{self.colors[self.color_index]}[Engagement Optimization Specialist]")
+#             self.color_index = (self.color_index + 1) % len(self.colors)
+#         if "Finished chain." in cleaned_data:
+#             cleaned_data = cleaned_data.replace("Finished chain.", f":{self.colors[self.color_index]}[Finished chain.]")
+#             self.color_index = (self.color_index + 1) % len(self.colors)
 
-        self.buffer.append(cleaned_data)
-        if "\n" in data:
-            self.expander.markdown(''.join(self.buffer), unsafe_allow_html=True)
-            self.buffer = []
+#         self.buffer.append(cleaned_data)
+#         if "\n" in data:
+#             self.expander.markdown(''.join(self.buffer), unsafe_allow_html=True)
+#             self.buffer = []
 
 # Creating Agents
 lead_data_agent = Agent(
   config=agents_config['lead_data_agent'],
   tools=[SerperDevTool(), ScrapeWebsiteTool()],
-  step_callback=StreamToExpander
 )
 
 cultural_fit_agent = Agent(
   config=agents_config['cultural_fit_agent'],
   tools=[SerperDevTool(), ScrapeWebsiteTool()],
-  step_callback=StreamToExpander
 )
 
 scoring_validation_agent = Agent(
   config=agents_config['scoring_validation_agent'],
   tools=[SerperDevTool(), ScrapeWebsiteTool()],
-  step_callback=StreamToExpander
 )
 
 # Creating Tasks
@@ -195,12 +198,10 @@ lead_scoring_crew = Crew(
 # Creating Agents
 email_content_specialist = Agent(
   config=agents_config['email_content_specialist'],
-  step_callback=StreamToExpander
 )
 
 engagement_strategist = Agent(
   config=agents_config['engagement_strategist'],
-  step_callback=StreamToExpander
 )
 
 # Creating Tasks
@@ -227,18 +228,26 @@ email_writing_crew = Crew(
   verbose=True
 )
 
+
 superbase_agent = Agent(
   config=agents_config['superbase_agent'],
-  tools=[SerperDevTool(), ScrapeWebsiteTool()],
-  step_callback=StreamToExpander
+  tools=[get_row_tool,get_all_rows,insert_row,delete_row,update_row,file_writer],
+  knowledge_sources=[text_knowledge],
 )
 
 # Creating Tasks
-lead_data_task = Task(
-  config=tasks_config['lead_data_collection'],
-  agent=lead_data_agent,
+database_query = Task(
+  config=tasks_config['database_query'],
+  agent=superbase_agent,
 )
 
+# Creating Crew
+superbase_crew = Crew(
+  agents=[superbase_agent],
+  tasks=[database_query],
+  verbose=True,
+  process=Process.sequential,
+)
 
 class SalesPipeline(Flow):
     @start()
@@ -300,6 +309,9 @@ class SalesPipeline(Flow):
     @listen(score_leads)
     def store_leads_score(self, scores):
         # Here we would store the scores in the database
+
+        data = superbase_crew.kickoff_for_each(scores)
+        print(data)
         return scores
 
     @listen(score_leads)
@@ -352,4 +364,8 @@ class SalesPipeline(Flow):
       #       print(f"Failed to send email: {e}")
 
       return emails
+
+if __name__ == "__main__":
+    flow = SalesPipeline()
+    flow.kickoff()
 # End of program

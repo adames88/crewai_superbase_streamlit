@@ -120,7 +120,7 @@ engagement_optimization:
     - Strong CTAs
     - Strategically placed engagement hooks that encourage immediate action
 
-engagement_optimization:
+database_query:
   description: >
     Answer the following questions about the database: {question}.
   expected_output: >

@@ -1,8 +1,12 @@
 import os
 from supabase import create_client, Client
+from helper import load_env, get_supabase_url, get_supabase_key
+load_env()
 
-url: str = os.environ.get("SUPABASE_URL")
-key: str = os.environ.get("SUPABASE_KEY")
+url: str = get_supabase_url()
+key: str = get_supabase_key()
+#url: str = os.environ.get("SUPABASE_URL")
+#key: str = os.environ.get("SUPABASE_KEY")
 
 # Add debug prints to verify environment variables
 print(f"URL: {url}")
