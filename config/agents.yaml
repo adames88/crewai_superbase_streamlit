@@ -60,7 +60,7 @@ engagement_strategist:
   verbose: true
   allow_delegation: false
 
-  superbase_agent:
+superbase_agent:
   role: >
     Supabase Agent
   goal: >

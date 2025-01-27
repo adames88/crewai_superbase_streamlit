@@ -1,9 +1,12 @@
 from crewai.tools import BaseTool
 import os
 from supabase import create_client, Client
+from helper import load_env, get_supabase_url, get_supabase_key
+load_env()
 
-url: str = os.environ.get("SUPABASE_URL")
-key: str = os.environ.get("SUPABASE_KEY")
+
+url: str = os.getenv("SUPERBASE_URL")
+key: str = os.getenv("SUPERBASE_KEY")
 supabase: Client = create_client(url, key)
 
 class SupabaseGetRowTool(BaseTool):

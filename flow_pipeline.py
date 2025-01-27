@@ -15,20 +15,22 @@ import streamlit as st
 import smtplib
 from email.message import EmailMessage
 import agentops
+import os
 #agentops.init("10d2ae41-41a5-468a-a0da-b0ab4225a8b0",skip_auto_end_session=True)
 
 from helper import load_env, get_supabase_url, get_supabase_key
-load_env()
-# Get the supabase url and key
-url: str = get_supabase_url()
-key: str = get_supabase_key()
 
-from supabase_tools import (
+load_env()
+
+url: str = os.getenv("SUPERBASE_URL")
+key: str = os.getenv("SUPERBASE_KEY")
+
+from superbase_tools import (
     supabase_get_row_tool, 
     supabase_get_all_rows_tool, 
     supabase_insert_row_tool, 
     supabase_delete_row_tool, 
-    supabase_update_row_tool
+    supabase_update_tool
 )
 
 from crewai_tools import FileWriterTool
@@ -42,11 +44,11 @@ file_writer = FileWriterTool(
 )
 
 # Create instances of the tools
-get_row_tool = supabase_get_row_tool()  # Instantiate the tool
-get_all_rows = supabase_get_all_rows_tool()
-insert_row = supabase_insert_row_tool()
-delete_row = supabase_delete_row_tool()
-update_row = supabase_update_row_tool()
+get_row_tool = supabase_get_row_tool.SupabaseGetRowTool()  # Instantiate the tool
+get_all_rows = supabase_get_all_rows_tool.SupabaseGetAllRowsTool()
+insert_row = supabase_insert_row_tool.SupabaseInsertRowTool()
+delete_row = supabase_delete_row_tool.SupabaseDeleteRowTool()
+update_row = supabase_update_tool.SupabaseUpdateRowTool()
 
 logging.basicConfig(
     level=logging.DEBUG
@@ -232,7 +234,7 @@ email_writing_crew = Crew(
 superbase_agent = Agent(
   config=agents_config['superbase_agent'],
   tools=[get_row_tool,get_all_rows,insert_row,delete_row,update_row,file_writer],
-  knowledge_sources=[text_knowledge],
+  #knowledge_sources=[text_knowledge],
 )
 
 # Creating Tasks
