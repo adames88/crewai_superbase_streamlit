@@ -19,7 +19,7 @@ import agentops
 
 from helper import load_env, get_supabase_url, get_supabase_key
 load_env()
-
+# Get the supabase url and key
 url: str = get_supabase_url()
 key: str = get_supabase_key()
 
