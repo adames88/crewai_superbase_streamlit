@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Dict, Optional, List, Set, Tuple
 import yaml
 from crewai import Flow
-from crewai.flow.flow import listen, start
+from crewai.flow.flow import listen, start, router
 import warnings
 warnings.filterwarnings("always", module="pydantic")
 import logging
@@ -76,7 +76,7 @@ class StreamToExpander:
     def __init__(self, expander):
         self.expander = expander
         self.buffer = []
-        self.colors = ['red', 'green', 'blue', 'orange', 'yellow','pink"', 'purple', 'gray']  # Define a list of colors
+        self.colors = ['red', 'green', 'blue', 'orange', 'yellow','pink', 'purple', 'gray']  # Define a list of colors
         self.color_index = 0  # Initialize color index
 
     def write(self, data):
@@ -245,7 +245,7 @@ class SalesPipeline(Flow):
     def fetch_leads(self):
         st.session_state.progress.progress(10, text='Fething Leads')  # Progress update
         time.sleep(3)
-        excel_file_path = "./sales_leads2.csv"
+        excel_file_path = "./sales_leads.csv"
         try:
             leads_df = pd.read_csv(excel_file_path)
         except FileNotFoundError:
@@ -267,6 +267,7 @@ class SalesPipeline(Flow):
         return leads
 
     @listen(fetch_leads)
+    
     def score_leads(self, leads):
         st.session_state.progress.progress(30,text='Scoring Leads')  # Progress update
         scores = lead_scoring_crew.kickoff_for_each(leads)
@@ -286,8 +287,51 @@ class SalesPipeline(Flow):
     @listen(score_leads)
     def filter_leads(self, scores):
         st.session_state.progress.progress(60, text='Filtering Leads')
+        filtered_leads = [score for score in scores if score['lead_score'].score >= 60]
+       
+        return filtered_leads
+    
+    @router(filter_leads)
+    def human_in_the_loop(self, filtered_leads):
+        print("Finding the top leads for human expert to review")
 
-        return [score for score in scores if score['lead_score'].score >= 60]
+
+        # Select the top 3 candidates
+        top_leads = filtered_leads
+        print()
+
+        print("Here are the top leads:")
+        for leads in top_leads:
+            print(
+                f"Name: {leads['Name']}, Score: {leads['Lead Score']}, Reason: {leads['Scoring Criteria']}"
+            )
+
+        # Present options to the user
+        print("\nPlease choose an option:")
+        print("1. Quit")
+        print("2. Redo lead scoring with additional feedback")
+        print("3. Proceed with writing emails to all leads")
+
+        choice = input("Enter the number of your choice: ")
+
+        if choice == "1":
+            print("Exiting the program.")
+            exit()
+
+        elif choice == "2":
+            feedback = input("\nPlease provide additional feedback on what you're looking for in your leads:\n")
+            if feedback:
+                self.state.scored_leads_feedback = feedback
+                print("\nRe-running lead scoring with your feedback...")
+                return "scored_leads_feedback"
+        
+        elif choice == "3":
+            print("\nProceeding to write emails to all leads.")
+            return "generate_emails"
+        
+        else:
+            print("\nInvalid choice. Please try again.")
+            return "human_in_the_loop"
 
     @listen(score_leads)
     def write_email(self, leads):
