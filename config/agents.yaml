@@ -94,7 +94,5 @@ superbase_agent:
         
         If you need to update the table info, then use the file writer tool to update the file.
         
-        Here is the table info:
-        A list of tables and their columns: {text_knowledge}
   verbose: true
   allow_delegation: false

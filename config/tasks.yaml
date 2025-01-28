@@ -98,7 +98,7 @@ email_drafting:
     A personalized email draft that:
     - Addresses the lead by name
     - Acknowledges their role and company
-    - Highlights how CrewAI can meet their specific needs or interests
+    - Highlights how SensAI can meet their specific needs or interests
 
 engagement_optimization:
   description: >
@@ -122,6 +122,12 @@ engagement_optimization:
 
 database_query:
   description: >
-    Answer the following questions about the database: {question}.
+    Enter the following lead into the supabase database using their information.
+
+    Use the following information from lead:
+    Personal Info: {personal_info}
+    Company Info: {company_info}
+    Lead Score: {lead_score}
+
   expected_output: >
-    You are to run the result of the operation you answered and return the results.
+    you are to insert the new lead information into supabase database.

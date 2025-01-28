@@ -33,15 +33,22 @@ from superbase_tools import (
     supabase_update_tool
 )
 
-from crewai_tools import FileWriterTool
-from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+# from crewai_tools import FileWriterTool
+# from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+# from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
 
-text_knowledge = open("knowledge/table_info.txt", "r").read()
+# text_knowledge = StringKnowledgeSource(
+#     content=open("knowledge/table_info.txt", "r").read()
+# )
 
-file_writer = FileWriterTool(
-    file_path="./knowledge/table_info.txt",
-    name="Table Info"
-)
+# text_knowledge = CrewDoclingSource(
+#     file_paths=["./table_info.md"]
+# )
+
+# file_writer = FileWriterTool(
+#     file_path="./knowledge/table_info.txt",
+#     name="Table Info"
+# )
 
 # Create instances of the tools
 get_row_tool = supabase_get_row_tool.SupabaseGetRowTool()  # Instantiate the tool
@@ -233,7 +240,7 @@ email_writing_crew = Crew(
 
 superbase_agent = Agent(
   config=agents_config['superbase_agent'],
-  tools=[get_row_tool,get_all_rows,insert_row,delete_row,update_row,file_writer],
+  tools=[get_row_tool,get_all_rows,insert_row,delete_row,update_row],
   #knowledge_sources=[text_knowledge],
 )
 
@@ -248,7 +255,7 @@ superbase_crew = Crew(
   agents=[superbase_agent],
   tasks=[database_query],
   verbose=True,
-  process=Process.sequential,
+  #knowledge_sources=[text_knowledge],
 )
 
 class SalesPipeline(Flow):
@@ -311,9 +318,9 @@ class SalesPipeline(Flow):
     @listen(score_leads)
     def store_leads_score(self, scores):
         # Here we would store the scores in the database
-
-        data = superbase_crew.kickoff_for_each(scores)
-        print(data)
+        result_py = [score.to_dict() for score in scores]
+        superbase_crew.kickoff_for_each(result_py)
+        
         return scores
 
     @listen(score_leads)
@@ -369,5 +376,5 @@ class SalesPipeline(Flow):
 
 if __name__ == "__main__":
     flow = SalesPipeline()
-    flow.kickoff()
+    emails = flow.kickoff()
 # End of program
