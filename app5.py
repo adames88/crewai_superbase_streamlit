@@ -6,7 +6,7 @@ from flow_pipeline2 import SalesPipeline
 import pandas as pd
 import textwrap
 from IPython.display import HTML
-from flow_pipeline import StreamToExpander
+from flow_pipeline2 import StreamToExpander
 import sys
 import textwrap
 
