@@ -87,24 +87,38 @@ def process_pipeline_outputs(emails):
     # Process emails
     #emails = flow.state["emails"]
     if emails:
-        for email in emails:
+        # First store all emails
+        email_map = {}  # Create a mapping of lead names to emails
+        for index, email in enumerate(emails):
             wrapped_email = textwrap.fill(email.raw, width=80)
             st.session_state.state["emails"].append(wrapped_email)
+            # Store the email with its metrics using the lead name as key
+            email_map[email.lead_name] = {
+                'email': wrapped_email,
+                'metrics': email.token_usage.dict()
+            }
 
-        for index, cost in enumerate(st.session_state.state["score_crews_results"]):
-            scores = st.session_state.state["score_crews_results"]
-            lead_scoring_result = scores[index]
-            # Convert UsageMetrics instance to a DataFrame
+        # Then process costs using the mapping
+        for index, score_result in enumerate(st.session_state.state["score_crews_results"]):
+            lead_name = f"{score_result['Name']} - {score_result['Company Name']}"
+            
+            # Convert UsageMetrics instance to a DataFrame for score
             df_usage_scoreLead_metrics = pd.DataFrame([flow.state["score_crews_results"][index].token_usage.dict()])
-            # Convert UsageMetrics instance to a DataFrame
-            df_usage_email_metrics = pd.DataFrame([emails[index].token_usage.dict()])
-            # Calculate total costs
-            costs_score = 0.150 * df_usage_scoreLead_metrics['total_tokens'].sum() / 1_000_000
-            costs_email = 0.150 * df_usage_email_metrics['total_tokens'].sum() / 1_000_000
-            st.session_state.state["cost"].append({f"Lead Name":f"{lead_scoring_result["Name"]} - {lead_scoring_result["Company Name"]}", 
-                                                    "Total Lead Score cost": f"{costs_score:.4f} ($)", 
-                                                    "Total Email Costs": f"{costs_email:.4f} ($)",
-                                                    "Total Costs": str(float(f"{costs_email:.4f}") + float(f"{costs_score:.4f}")) + " $"})
+            
+            # Get corresponding email metrics
+            if lead_name in email_map:
+                df_usage_email_metrics = pd.DataFrame([email_map[lead_name]['metrics']])
+                
+                # Calculate total costs
+                costs_score = 0.150 * df_usage_scoreLead_metrics['total_tokens'].sum() / 1_000_000
+                costs_email = 0.150 * df_usage_email_metrics['total_tokens'].sum() / 1_000_000
+                
+                st.session_state.state["cost"].append({
+                    "Lead Name": lead_name,
+                    "Total Lead Score cost": f"{costs_score:.4f} ($)",
+                    "Total Email Costs": f"{costs_email:.4f} ($)",
+                    "Total Costs": str(float(f"{costs_email:.4f}") + float(f"{costs_score:.4f}")) + " $"
+                })
 
 
 
@@ -142,13 +156,22 @@ with st.sidebar:
 
     # 🔹 User Input for Supabase Credentials
     st.subheader("🛠️ Supabase Configuration")
-    supabase_url = st.text_input("Enter Supabase URL", value=os.getenv("SUPERBASE_URL", ""))
-    supabase_key = st.text_input("Enter Supabase Key", type="password", value=os.getenv("SUPERBASE_KEY", ""))
+    supabase_url = st.text_input("Enter Supabase URL", 
+                                placeholder="Enter new Supabase URL if needed",
+                                value=os.getenv("SUPERBASE_URL", ""))
+    supabase_key = st.text_input("Enter Supabase Key", 
+                                placeholder="Enter new Supabase key if needed",
+                                type="password",
+                                value="")  # Default value not shown but still used
 
-    if supabase_url and supabase_key:
-        os.environ["SUPERBASE_URL"] = supabase_url
-        os.environ["SUPERBASE_KEY"] = supabase_key
-        st.success("✅ Supabase credentials updated!")
+    # Use the entered value if provided, otherwise use the environment variable
+    active_url = supabase_url if supabase_url else os.getenv("SUPERBASE_URL", "")
+    active_key = supabase_key if supabase_key else os.getenv("SUPERBASE_KEY", "")
+
+    if active_url and active_key:
+        os.environ["SUPERBASE_URL"] = active_url
+        os.environ["SUPERBASE_KEY"] = active_key
+        st.success("✅ Supabase credentials configured!")
 
     # 🔹 File Upload Section
     st.subheader("📂 Upload Sales Leads CSV/Excel")
