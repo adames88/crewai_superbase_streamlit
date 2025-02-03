@@ -289,6 +289,7 @@ class SalesPipeline(Flow):
         self.state["score_crews_results"] = scores
 
         return scores
+
     
     @listen(score_leads)
     def store_leads_score(self, scores):
@@ -299,13 +300,13 @@ class SalesPipeline(Flow):
         
         return scores
         
+
     @listen(score_leads)
     def filter_leads(self, scores):
         st.session_state.progress.progress(60, text='Filtering Leads')
         filtered_leads = [score for score in scores if score['lead_score'].score >= 60]
        
         return filtered_leads
-    
 
     @listen(filter_leads)
     def write_email(self, filtered_leads):
