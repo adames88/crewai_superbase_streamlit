@@ -1,4 +1,5 @@
 crewai>=0.16.0
+crewai-tools
 langchain>=0.1.0
 python-dotenv>=1.0.0
 openai>=1.12.0
