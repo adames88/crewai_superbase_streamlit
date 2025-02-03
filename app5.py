@@ -140,6 +140,36 @@ with st.sidebar:
     else:
         st.info("No URLs found yet. Run the pipeline to discover URLs.")
 
+    # 🔹 User Input for Supabase Credentials
+    st.subheader("🛠️ Supabase Configuration")
+    supabase_url = st.text_input("Enter Supabase URL", value=os.getenv("SUPERBASE_URL", ""))
+    supabase_key = st.text_input("Enter Supabase Key", type="password", value=os.getenv("SUPERBASE_KEY", ""))
+
+    if supabase_url and supabase_key:
+        os.environ["SUPERBASE_URL"] = supabase_url
+        os.environ["SUPERBASE_KEY"] = supabase_key
+        st.success("✅ Supabase credentials updated!")
+
+    # 🔹 File Upload Section
+    st.subheader("📂 Upload Sales Leads CSV/Excel")
+    uploaded_file = st.file_uploader("Upload a CSV or Excel file", type=["csv", "xlsx"])
+
+    if uploaded_file:
+        # Detect file type and read into a DataFrame
+        if uploaded_file.name.endswith(".csv"):
+            uploaded_df = pd.read_csv(uploaded_file)
+        else:
+            uploaded_df = pd.read_excel(uploaded_file)
+
+        # Validate required columns
+        required_columns = {"name", "job_title", "company", "email", "usecase"}
+        if not required_columns.issubset(uploaded_df.columns):
+            st.error(f"❌ Invalid file format! The file must contain the following columns: {', '.join(required_columns)}")
+        else:
+            st.success("✅ File successfully uploaded! The pipeline will use this data.")
+            st.session_state["uploaded_leads"] = uploaded_df  # Store uploaded data
+
+
 # Tabs for parsed outputs
 st.header("Pipeline Outputs")
 tab1, tab2, tab3, tab4= st.tabs(

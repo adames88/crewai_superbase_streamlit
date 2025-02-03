@@ -258,14 +258,20 @@ superbase_crew = Crew(
 class SalesPipeline(Flow):
     @start()
     def fetch_leads(self):
-        st.session_state.progress.progress(10, text='Fething Leads')  # Progress update
+        st.session_state.progress.progress(10, text='Fetching Leads')  # Progress update
         time.sleep(3)
-        excel_file_path = "./sales_leads.csv"
-        try:
-            leads_df = pd.read_csv(excel_file_path)
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Excel file not found at {excel_file_path}. Please check the path.")
 
+        # Check if user uploaded a file
+        if "uploaded_leads" in st.session_state:
+            leads_df = st.session_state["uploaded_leads"]
+        else:
+            excel_file_path = "./sales_leads.csv"
+            try:
+                leads_df = pd.read_csv(excel_file_path)
+            except FileNotFoundError:
+                raise FileNotFoundError(f"Excel file not found at {excel_file_path}. Please check the path.")
+
+        # Convert data into lead format
         leads = []
         for _, row in leads_df.iterrows():
             lead = {
@@ -281,6 +287,7 @@ class SalesPipeline(Flow):
             leads.append(lead)
 
         return leads
+
 
     @listen(fetch_leads)
     def score_leads(self, leads):
