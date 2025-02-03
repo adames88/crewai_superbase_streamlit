@@ -85,40 +85,37 @@ def process_pipeline_outputs(emails):
             st.session_state.state["filtered_leads"].append(filtered_leads_data)
 
     # Process emails
-    #emails = flow.state["emails"]
     if emails:
-        # First store all emails
-        email_map = {}  # Create a mapping of lead names to emails
+        all_emails = []
         for index, email in enumerate(emails):
+            # Get corresponding lead scoring result
+            scores = st.session_state.state["score_crews_results"]
+            lead_scoring_result = scores[index]
+            
+            # Process email content
             wrapped_email = textwrap.fill(email.raw, width=80)
             st.session_state.state["emails"].append(wrapped_email)
-            # Store the email with its metrics using the lead name as key
-            email_map[email.lead_name] = {
-                'email': wrapped_email,
-                'metrics': email.token_usage.dict()
-            }
+            
+            # Save email with lead info
+            all_emails.append({
+                "Lead Name": lead_scoring_result["Name"],
+                "Company Name": lead_scoring_result["Company Name"],
+                "Email": wrapped_email
+            })
 
-        # Then process costs using the mapping
-        for index, score_result in enumerate(st.session_state.state["score_crews_results"]):
-            lead_name = f"{score_result['Name']} - {score_result['Company Name']}"
-            
-            # Convert UsageMetrics instance to a DataFrame for score
+            # Calculate costs
             df_usage_scoreLead_metrics = pd.DataFrame([flow.state["score_crews_results"][index].token_usage.dict()])
+            df_usage_email_metrics = pd.DataFrame([email.token_usage.dict()])
             
-            # Get corresponding email metrics
-            if lead_name in email_map:
-                df_usage_email_metrics = pd.DataFrame([email_map[lead_name]['metrics']])
-                
-                # Calculate total costs
-                costs_score = 0.150 * df_usage_scoreLead_metrics['total_tokens'].sum() / 1_000_000
-                costs_email = 0.150 * df_usage_email_metrics['total_tokens'].sum() / 1_000_000
-                
-                st.session_state.state["cost"].append({
-                    "Lead Name": lead_name,
-                    "Total Lead Score cost": f"{costs_score:.4f} ($)",
-                    "Total Email Costs": f"{costs_email:.4f} ($)",
-                    "Total Costs": str(float(f"{costs_email:.4f}") + float(f"{costs_score:.4f}")) + " $"
-                })
+            costs_score = 0.150 * df_usage_scoreLead_metrics['total_tokens'].sum() / 1_000_000
+            costs_email = 0.150 * df_usage_email_metrics['total_tokens'].sum() / 1_000_000
+            
+            st.session_state.state["cost"].append({
+                "Lead Name": f"{lead_scoring_result['Name']} - {lead_scoring_result['Company Name']}", 
+                "Total Lead Score cost": f"{costs_score:.4f} ($)", 
+                "Total Email Costs": f"{costs_email:.4f} ($)",
+                "Total Costs": str(float(f"{costs_email:.4f}") + float(f"{costs_score:.4f}")) + " $"
+            })
 
 
 
