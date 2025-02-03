@@ -31,6 +31,10 @@ if "state" not in st.session_state:
 if "progress" not in st.session_state:
     st.session_state.progress = st.empty()
 
+
+if "captured_urls" not in st.session_state:
+    st.session_state.captured_urls = []
+
 # # Helper function: Add to chat history
 def add_to_chat(role, content):
     st.session_state.messages.append({"role": role, "content": content})
@@ -125,6 +129,13 @@ if st.button("Run Pipeline"):
     # Add a message indicating completion to the chat history
     #add_to_chat("assistant", "Pipeline execution complete! You can now explore the results.")
 
+with st.sidebar:
+    st.header("🔗 References - URLs Used by the Agents")
+    if st.session_state.captured_urls:
+        for url in st.session_state.captured_urls:
+            st.markdown(f"- [{url}]({url})")
+    else:
+        st.info("No URLs found yet. Run the pipeline to discover URLs.")
 
 # Tabs for parsed outputs
 st.header("Pipeline Outputs")

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Dict, Optional, List, Set, Tuple
 import yaml
 from crewai import Flow
-from crewai.flow.flow import listen, start, router
+from crewai.flow.flow import listen, start, router, or_
 import warnings
 warnings.filterwarnings("always", module="pydantic")
 import logging
@@ -57,6 +57,7 @@ class LeadScore(BaseModel):
     score: int = Field(ge=0, le=100, description="The final score assigned to the lead (0-100).")
     scoring_criteria: List[str] = Field(description="The criteria used to determine the lead's score.")
     validation_notes: Optional[str] = Field(None, description="Any notes regarding the validation of the lead score.")
+    scored_leads_feedback: str = Field(description="Feedback provided by user")
 
 class LeadScoringResult(BaseModel):
     personal_info: LeadPersonalInfo = Field(description="Personal information about the lead.")
@@ -72,17 +73,32 @@ for config_type, file_path in files.items():
 agents_config = configs['agents']
 tasks_config = configs['tasks']
 
+
 class StreamToExpander:
     def __init__(self, expander):
         self.expander = expander
         self.buffer = []
-        self.colors = ['red', 'green', 'blue', 'orange', 'yellow','pink', 'purple', 'gray']  # Define a list of colors
-        self.color_index = 0  # Initialize color index
+        self.avatars = {
+            'Entering new CrewAgentExecutor chain': '🔄',
+            'Lead Data Specialist': '📊',
+            'Cultural Fit Analyst': '🎯',
+            'Lead Scorer and Validator': '⭐',
+            'Supabase Agent': '💾',
+            'Email Content Writer': '✍️',
+            'Engagement Optimization Specialist': '📈',
+            'Finished chain.': '✅'
+        }  # Define a list of colors
 
     def write(self, data):
         # Filter out ANSI escape codes using a regular expression
         cleaned_data = re.sub(r'\x1B\[[0-9;]*[mK]', '', data)
 
+        # Find URLs in the cleaned data
+        url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+(?:/[^"\s<>]*)?(?:\?[^"\s<>]*)?(?:#[^"\s<>]*)?'
+        urls = re.findall(url_pattern, cleaned_data)
+        if urls:
+            # Add new URLs to the session state list if they're not already there
+            st.session_state.captured_urls.extend([url for url in urls if url not in st.session_state.captured_urls])
         # Check if the data contains 'task' information
         task_match_object = re.search(r'\"task\"\s*:\s*\"(.*?)\"', cleaned_data, re.IGNORECASE)
         task_match_input = re.search(r'task\s*:\s*([^\n]*)', cleaned_data, re.IGNORECASE)
@@ -100,29 +116,29 @@ class StreamToExpander:
             # Apply different color and switch color index
             #self.color_index = self.colors[0]  # Increment color index and wrap around if necessary
 
-            cleaned_data = cleaned_data.replace("Entering new CrewAgentExecutor chain", f":{self.colors[0]}[Entering new CrewAgentExecutor chain]")
+            cleaned_data = cleaned_data.replace("Entering new CrewAgentExecutor chain", f"{self.avatars["Entering new CrewAgentExecutor chain"]} Entering new CrewAgentExecutor chain")
 
-        if "Lead Data Specialistt" in cleaned_data:
+        if "Lead Data Specialist" in cleaned_data:
             # Apply different color 
-            cleaned_data = cleaned_data.replace("Lead Data Specialist", f":{self.colors[1]}[Lead Data Specialist]")
+            cleaned_data = cleaned_data.replace("Lead Data Specialist", f"{self.avatars["Lead Data Specialist"]} Lead Data Specialist")
             #self.color_index = (self.color_index + 1) % len(self.colors)
         if "Cultural Fit Analyst" in cleaned_data:
-            cleaned_data = cleaned_data.replace("Cultural Fit Analyst", f":{self.colors[2]}[Cultural Fit Analyst]")
+            cleaned_data = cleaned_data.replace("Cultural Fit Analyst", f":{self.avatars["Cultural Fit Analyst"]} Cultural Fit Analyst")
             #self.color_index = (self.color_index + 1) % len(self.colors)
         if "Lead Scorer and Validator" in cleaned_data:
-            cleaned_data = cleaned_data.replace("Lead Scorer and Validator", f":{self.colors[3]}[Lead Scorer and Validator]")
+            cleaned_data = cleaned_data.replace("Lead Scorer and Validator", f":{self.avatars["Lead Scorer and Validator"]} Lead Scorer and Validator")
             #self.color_index = (self.color_index + 1) % len(self.colors)
-        if "Supabase Agent" in cleaned_data:
-            cleaned_data = cleaned_data.replace("Supabase Agent", f":{self.colors[4]}[Supabase Agent]")
+        if "Supabase" in cleaned_data:
+            cleaned_data = cleaned_data.replace("Supabase Agent", f":{self.avatars["Supabase Agent"]} Supabase Agent")
             #self.color_index = (self.color_index + 1) % len(self.colors)
         if "Email Content Writer" in cleaned_data:
-            cleaned_data = cleaned_data.replace("Email Content Writer", f":{self.colors[5]}[Email Content Writer]")
+            cleaned_data = cleaned_data.replace("Email Content Writer", f":{self.avatars["Email Content Writer"]} Email Content Writer")
             #self.color_index = (self.color_index + 1) % len(self.colors)
         if "Engagement Optimization Specialist" in cleaned_data:
-            cleaned_data = cleaned_data.replace("Engagement Optimization Specialist", f":{self.colors[6]}[Engagement Optimization Specialist]")
+            cleaned_data = cleaned_data.replace("Engagement Optimization Specialist", f":{self.avatars["Engagement Optimization Specialist"]} Engagement Optimization Specialist")
             #self.color_index = (self.color_index + 1) % len(self.colors)
         if "Finished chain." in cleaned_data:
-            cleaned_data = cleaned_data.replace("Finished chain.", f":{self.colors[7]}[Finished chain.]")
+            cleaned_data = cleaned_data.replace("Finished chain.", f":{self.avatars["Finished chain."]} Finished chain.")
             #self.color_index = (self.color_index + 1) % len(self.colors)
 
         self.buffer.append(cleaned_data)
@@ -239,7 +255,6 @@ superbase_crew = Crew(
   #knowledge_sources=[text_knowledge],
 )
 
-
 class SalesPipeline(Flow):
     @start()
     def fetch_leads(self):
@@ -259,7 +274,8 @@ class SalesPipeline(Flow):
                     "job_title": row["job_title"],
                     "company": row["company"],
                     "email": row["email"],
-                    "use_case": row["usecase"]
+                    "use_case": row["usecase"],
+                    "scored_leads_feedback": ""
                 },
             }
             leads.append(lead)
@@ -267,12 +283,11 @@ class SalesPipeline(Flow):
         return leads
 
     @listen(fetch_leads)
-    
     def score_leads(self, leads):
         st.session_state.progress.progress(30,text='Scoring Leads')  # Progress update
-        scores = lead_scoring_crew.kickoff_for_each(leads)
-        
+        scores = lead_scoring_crew.kickoff_for_each(leads) # This is the crew that will score the leads
         self.state["score_crews_results"] = scores
+
         return scores
     
     @listen(score_leads)
@@ -291,52 +306,11 @@ class SalesPipeline(Flow):
        
         return filtered_leads
     
-    @router(filter_leads)
-    def human_in_the_loop(self, filtered_leads):
-        print("Finding the top leads for human expert to review")
 
-
-        # Select the top 3 candidates
-        top_leads = filtered_leads
-        print()
-
-        print("Here are the top leads:")
-        for leads in top_leads:
-            print(
-                f"Name: {leads['Name']}, Score: {leads['Lead Score']}, Reason: {leads['Scoring Criteria']}"
-            )
-
-        # Present options to the user
-        print("\nPlease choose an option:")
-        print("1. Quit")
-        print("2. Redo lead scoring with additional feedback")
-        print("3. Proceed with writing emails to all leads")
-
-        choice = input("Enter the number of your choice: ")
-
-        if choice == "1":
-            print("Exiting the program.")
-            exit()
-
-        elif choice == "2":
-            feedback = input("\nPlease provide additional feedback on what you're looking for in your leads:\n")
-            if feedback:
-                self.state.scored_leads_feedback = feedback
-                print("\nRe-running lead scoring with your feedback...")
-                return "scored_leads_feedback"
-        
-        elif choice == "3":
-            print("\nProceeding to write emails to all leads.")
-            return "generate_emails"
-        
-        else:
-            print("\nInvalid choice. Please try again.")
-            return "human_in_the_loop"
-
-    @listen(score_leads)
-    def write_email(self, leads):
+    @listen(filter_leads)
+    def write_email(self, filtered_leads):
         st.session_state.progress.progress(70, text='Writing Email')  # Progress update
-        scored_leads = [lead.to_dict() for lead in leads]
+        scored_leads = [lead.to_dict() for lead in filtered_leads]
         emails = email_writing_crew.kickoff_for_each(scored_leads)
         return emails
 

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Dict, Optional, List, Set, Tuple
 import yaml
 from crewai import Flow
-from crewai.flow.flow import listen, start
+from crewai.flow.flow import listen, start, router, or_
 import warnings
 warnings.filterwarnings("always", module="pydantic")
 import logging
@@ -14,17 +14,7 @@ import pandas as pd
 import streamlit as st
 import smtplib
 from email.message import EmailMessage
-import agentops
-import os
-#agentops.init("10d2ae41-41a5-468a-a0da-b0ab4225a8b0",skip_auto_end_session=True)
-
-from helper import load_env, get_supabase_url, get_supabase_key
-
-load_env()
-
-url: str = os.getenv("SUPERBASE_URL")
-key: str = os.getenv("SUPERBASE_KEY")
-
+import time 
 from superbase_tools import (
     supabase_get_row_tool, 
     supabase_get_all_rows_tool, 
@@ -32,23 +22,15 @@ from superbase_tools import (
     supabase_delete_row_tool, 
     supabase_update_tool
 )
+from helper import load_env, get_supabase_url, get_supabase_key
+import os
+load_env()
 
-# from crewai_tools import FileWriterTool
-# from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
-# from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
+url: str = os.getenv("SUPERBASE_URL")
+key: str = os.getenv("SUPERBASE_KEY")
 
-# text_knowledge = StringKnowledgeSource(
-#     content=open("knowledge/table_info.txt", "r").read()
-# )
+logging.basicConfig(level=logging.DEBUG)
 
-# text_knowledge = CrewDoclingSource(
-#     file_paths=["./table_info.md"]
-# )
-
-# file_writer = FileWriterTool(
-#     file_path="./knowledge/table_info.txt",
-#     name="Table Info"
-# )
 
 # Create instances of the tools
 get_row_tool = supabase_get_row_tool.SupabaseGetRowTool()  # Instantiate the tool
@@ -57,9 +39,6 @@ insert_row = supabase_insert_row_tool.SupabaseInsertRowTool()
 delete_row = supabase_delete_row_tool.SupabaseDeleteRowTool()
 update_row = supabase_update_tool.SupabaseUpdateRowTool()
 
-logging.basicConfig(
-    level=logging.DEBUG
-) 
 
 class LeadPersonalInfo(BaseModel):
     name: str = Field(description="The full name of the lead.")
@@ -78,19 +57,14 @@ class LeadScore(BaseModel):
     score: int = Field(ge=0, le=100, description="The final score assigned to the lead (0-100).")
     scoring_criteria: List[str] = Field(description="The criteria used to determine the lead's score.")
     validation_notes: Optional[str] = Field(None, description="Any notes regarding the validation of the lead score.")
+    scored_leads_feedback: str = Field(description="Feedback provided by user")
 
 class LeadScoringResult(BaseModel):
     personal_info: LeadPersonalInfo = Field(description="Personal information about the lead.")
     company_info: CompanyInfo = Field(description="Information about the lead's company.")
     lead_score: LeadScore = Field(description="The calculated score and related information for the lead.")
 
-
-        # Define file paths for YAML configurations
-files = {
-        'agents': 'config/agents.yaml',
-        'tasks': 'config/tasks.yaml'
-    }
-# Load configurations from YAML files
+files = {'agents': 'config/agents.yaml', 'tasks': 'config/tasks.yaml'}
 configs = {}
 for config_type, file_path in files.items():
     with open(file_path, 'r') as file:
@@ -99,75 +73,81 @@ for config_type, file_path in files.items():
 agents_config = configs['agents']
 tasks_config = configs['tasks']
 
-# class StreamToExpander:
-#     def __init__(self, expander):
-#         self.expander = expander
-#         self.buffer = []
-#         self.colors = ['red', 'green', 'blue', 'orange', "yellow","pink", "gray"]  # Define a list of colors
-#         self.color_index = 0  # Initialize color index
+class StreamToExpander:
+    def __init__(self, expander):
+        self.expander = expander
+        self.buffer = []
+        self.colors = ['red', 'green', 'blue', 'orange', 'yellow','pink', 'purple', 'gray']  # Define a list of colors
+        self.color_index = 0  # Initialize color index
 
-#     def write(self, data):
-#         # Filter out ANSI escape codes using a regular expression
-#         cleaned_data = re.sub(r'\x1B\[[0-9;]*[mK]', '', data)
+    def write(self, data):
+        # Filter out ANSI escape codes using a regular expression
+        cleaned_data = re.sub(r'\x1B\[[0-9;]*[mK]', '', data)
 
-#         # Check if the data contains 'task' information
-#         task_match_object = re.search(r'\"task\"\s*:\s*\"(.*?)\"', cleaned_data, re.IGNORECASE)
-#         task_match_input = re.search(r'task\s*:\s*([^\n]*)', cleaned_data, re.IGNORECASE)
-#         task_value = None
-#         if task_match_object:
-#             task_value = task_match_object.group(1)
-#         elif task_match_input:
-#             task_value = task_match_input.group(1).strip()
+        # Check if the data contains 'task' information
+        task_match_object = re.search(r'\"task\"\s*:\s*\"(.*?)\"', cleaned_data, re.IGNORECASE)
+        task_match_input = re.search(r'task\s*:\s*([^\n]*)', cleaned_data, re.IGNORECASE)
+        task_value = None
+        if task_match_object:
+            task_value = task_match_object.group(1)
+        elif task_match_input:
+            task_value = task_match_input.group(1).strip()
 
-#         if task_value:
-#             st.toast(":robot_face: " + task_value)
+        if task_value:
+            st.toast(":robot_face: " + task_value)
 
-#         # Check if the text contains the specified phrase and apply color
-#         if "Entering new CrewAgentExecutor chain" in cleaned_data:
-#             # Apply different color and switch color index
-#             self.color_index = (self.color_index + 1) % len(self.colors)  # Increment color index and wrap around if necessary
+        # Check if the text contains the specified phrase and apply color
+        if "Entering new CrewAgentExecutor chain" in cleaned_data:
+            # Apply different color and switch color index
+            #self.color_index = self.colors[0]  # Increment color index and wrap around if necessary
 
-#             cleaned_data = cleaned_data.replace("Entering new CrewAgentExecutor chain", f":{self.colors[self.color_index]}[Entering new CrewAgentExecutor chain]")
+            cleaned_data = cleaned_data.replace("Entering new CrewAgentExecutor chain", f":{self.colors[0]}[Entering new CrewAgentExecutor chain]")
 
-#         if "Lead Data Specialistt" in cleaned_data:
-#             # Apply different color 
-#             cleaned_data = cleaned_data.replace("Lead Data Specialist", f":{self.colors[self.color_index]}[Lead Data Specialist]")
-#             self.color_index = (self.color_index + 1) % len(self.colors)
-#         if "Cultural Fit Analyst" in cleaned_data:
-#             cleaned_data = cleaned_data.replace("Cultural Fit Analyst", f":{self.colors[self.color_index]}[Cultural Fit Analyst]")
-#             self.color_index = (self.color_index + 1) % len(self.colors)
-#         if "Lead Scorer and Validator" in cleaned_data:
-#             cleaned_data = cleaned_data.replace("Lead Scorer and Validator", f":{self.colors[self.color_index]}[Lead Scorer and Validator]")
-#             self.color_index = (self.color_index + 1) % len(self.colors)
-#         if "Email Content Writer" in cleaned_data:
-#             cleaned_data = cleaned_data.replace("Email Content Writer", f":{self.colors[self.color_index]}[Email Content Writer]")
-#             self.color_index = (self.color_index + 1) % len(self.colors)
-#         if "Engagement Optimization Specialist" in cleaned_data:
-#             cleaned_data = cleaned_data.replace("Engagement Optimization Specialist", f":{self.colors[self.color_index]}[Engagement Optimization Specialist]")
-#             self.color_index = (self.color_index + 1) % len(self.colors)
-#         if "Finished chain." in cleaned_data:
-#             cleaned_data = cleaned_data.replace("Finished chain.", f":{self.colors[self.color_index]}[Finished chain.]")
-#             self.color_index = (self.color_index + 1) % len(self.colors)
+        if "Lead Data Specialistt" in cleaned_data:
+            # Apply different color 
+            cleaned_data = cleaned_data.replace("Lead Data Specialist", f":{self.colors[1]}[Lead Data Specialist]")
+            #self.color_index = (self.color_index + 1) % len(self.colors)
+        if "Cultural Fit Analyst" in cleaned_data:
+            cleaned_data = cleaned_data.replace("Cultural Fit Analyst", f":{self.colors[2]}[Cultural Fit Analyst]")
+            #self.color_index = (self.color_index + 1) % len(self.colors)
+        if "Lead Scorer and Validator" in cleaned_data:
+            cleaned_data = cleaned_data.replace("Lead Scorer and Validator", f":{self.colors[3]}[Lead Scorer and Validator]")
+            #self.color_index = (self.color_index + 1) % len(self.colors)
+        if "Supabase Agent" in cleaned_data:
+            cleaned_data = cleaned_data.replace("Supabase Agent", f":{self.colors[4]}[Supabase Agent]")
+            #self.color_index = (self.color_index + 1) % len(self.colors)
+        if "Email Content Writer" in cleaned_data:
+            cleaned_data = cleaned_data.replace("Email Content Writer", f":{self.colors[5]}[Email Content Writer]")
+            #self.color_index = (self.color_index + 1) % len(self.colors)
+        if "Engagement Optimization Specialist" in cleaned_data:
+            cleaned_data = cleaned_data.replace("Engagement Optimization Specialist", f":{self.colors[6]}[Engagement Optimization Specialist]")
+            #self.color_index = (self.color_index + 1) % len(self.colors)
+        if "Finished chain." in cleaned_data:
+            cleaned_data = cleaned_data.replace("Finished chain.", f":{self.colors[7]}[Finished chain.]")
+            #self.color_index = (self.color_index + 1) % len(self.colors)
 
-#         self.buffer.append(cleaned_data)
-#         if "\n" in data:
-#             self.expander.markdown(''.join(self.buffer), unsafe_allow_html=True)
-#             self.buffer = []
+        self.buffer.append(cleaned_data)
+        if "\n" in data:
+            self.expander.markdown(''.join(self.buffer), unsafe_allow_html=True)
+            self.buffer = []
 
 # Creating Agents
 lead_data_agent = Agent(
   config=agents_config['lead_data_agent'],
   tools=[SerperDevTool(), ScrapeWebsiteTool()],
+  step_callback=StreamToExpander
 )
 
 cultural_fit_agent = Agent(
   config=agents_config['cultural_fit_agent'],
   tools=[SerperDevTool(), ScrapeWebsiteTool()],
+  step_callback=StreamToExpander
 )
 
 scoring_validation_agent = Agent(
   config=agents_config['scoring_validation_agent'],
   tools=[SerperDevTool(), ScrapeWebsiteTool()],
+  step_callback=StreamToExpander
 )
 
 # Creating Tasks
@@ -207,10 +187,12 @@ lead_scoring_crew = Crew(
 # Creating Agents
 email_content_specialist = Agent(
   config=agents_config['email_content_specialist'],
+  step_callback=StreamToExpander
 )
 
 engagement_strategist = Agent(
   config=agents_config['engagement_strategist'],
+  step_callback=StreamToExpander
 )
 
 # Creating Tasks
@@ -237,10 +219,10 @@ email_writing_crew = Crew(
   verbose=True
 )
 
-
 superbase_agent = Agent(
   config=agents_config['superbase_agent'],
   tools=[get_row_tool,get_all_rows,insert_row,delete_row,update_row],
+  step_callback=StreamToExpander,
   #knowledge_sources=[text_knowledge],
 )
 
@@ -261,120 +243,139 @@ superbase_crew = Crew(
 class SalesPipeline(Flow):
     @start()
     def fetch_leads(self):
-      # Specify the path to your Excel file
-      excel_file_path = "./sales_leads.csv"
+        st.session_state.progress.progress(10, text='Fething Leads')  # Progress update
+        time.sleep(3)
+        excel_file_path = "./sales_leads.csv"
+        try:
+            leads_df = pd.read_csv(excel_file_path)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Excel file not found at {excel_file_path}. Please check the path.")
 
-      # Read the Excel file
-      try:
-          leads_df = pd.read_csv(excel_file_path)
-      except FileNotFoundError:
-          raise FileNotFoundError(f"Excel file not found at {excel_file_path}. Please check the path.")
-      
-      # Convert the DataFrame to the required format
-      leads = []
-      for _, row in leads_df.iterrows():
-          lead = {
-              "lead_data": {
-                  "name": row["name"],
-                  "job_title": row["job_title"],
-                  "company": row["company"],
-                  "email": row["email"],
-                  "use_case": row["usecase"]
-              },
-          }
-          leads.append(lead)
-    
-      return leads
-    # def fetch_leads(self):
-        # Pull our leads from the database
-        # leads = [
-        #     {
-        #         "lead_data": {
-        #             "name": "Pavel Sher",
-        #             "job_title": "CEO of FuseBase",
-        #             "company": "FuseBase",
-        #             "email": "paul@fusebase.com",
-        #             "use_case": "Using AI Agent to do better data enrichment."
-        #         },
-        #     },
-        #                 {
-        #         "lead_data": {
-        #             "name": "Abdulaziz AlMulhem ",
-        #             "job_title": "Founder & CEO of packman.ai",
-        #             "company": "packman.ai",
-        #             "email": "Abdulaziz@packman.ai",
-        #             "use_case": "Using AI Agent for automation."
-        #         },
-        #     },
-        # ]
-        # return leads
+        leads = []
+        for _, row in leads_df.iterrows():
+            lead = {
+                "lead_data": {
+                    "name": row["name"],
+                    "job_title": row["job_title"],
+                    "company": row["company"],
+                    "email": row["email"],
+                    "use_case": row["usecase"],
+                    "scored_leads_feedback": ""
+                },
+            }
+            leads.append(lead)
 
-    @listen(fetch_leads)
+        return leads
+
+    @listen(or_(fetch_leads, "scored_leads_feedback"))
     def score_leads(self, leads):
-        scores = lead_scoring_crew.kickoff_for_each(leads)
+        st.session_state.progress.progress(30,text='Scoring Leads')  # Progress update
+        
+        if self.state.get("scored_leads_feedback", LeadScore(
+            score=0,
+            scoring_criteria=[],
+            validation_notes="",
+            scored_leads_feedback=""
+        ).scored_leads_feedback) == "":
+            print("No feedback provided")
+            print(leads)
+            scores = lead_scoring_crew.kickoff_for_each(leads)
+
+        else:
+            print("Feedback provided")
+            excel_file_path = "./sales_leads2.csv"
+            try:
+                leads_df = pd.read_csv(excel_file_path)
+            except FileNotFoundError:
+                raise FileNotFoundError(f"Excel file not found at {excel_file_path}. Please check the path.")
+            
+            lead_dic = [lead.to_dict() for lead in leads]
+            new_leads = []
+            for _, row in leads_df.iterrows():
+                if lead_dic[0]["personal_info"]["name"] == row["name"]:
+                    
+                    lead = {
+                        "lead_data": {
+                                "name": row["name"],
+                                "job_title": row["job_title"],
+                                "company": row["company"],
+                                "email": row["email"],
+                                "use_case": row["usecase"],
+                                "scored_leads_feedback": self.state["scored_leads_feedback"]
+                            },
+                        }
+                    new_leads.append(lead)
+                #lead["scored_leads_feedback"] = self.state["scored_leads_feedback"]
+            scores = lead_scoring_crew.kickoff_for_each(new_leads) # This is the crew that will score the leads
+        
         self.state["score_crews_results"] = scores
         return scores
-
+    
     @listen(score_leads)
     def store_leads_score(self, scores):
         # Here we would store the scores in the database
+        st.session_state.progress.progress(50, text='storing leads at supabase')
         result_py = [score.to_dict() for score in scores]
         superbase_crew.kickoff_for_each(result_py)
         
         return scores
-
+        
     @listen(score_leads)
     def filter_leads(self, scores):
-        return [score for score in scores if score['lead_score'].score >= 60]
+        st.session_state.progress.progress(60, text='Filtering Leads')
+        filtered_leads = [score for score in scores if score['lead_score'].score >= 60]
+       
+        return filtered_leads
+    
+    @router(filter_leads)
+    def human_in_the_loop(self, filtered_leads):
+        print("Finding the top leads for human expert to review")
 
-    @listen(filter_leads)
+        # Select the top 3 candidates
+        top_leads = filtered_leads
+
+        print("Here are the top leads:")
+        for leads in top_leads:
+            print(
+                f"Name: {leads['personal_info'].name}, Score: {leads['lead_score'].score}, Reason: {leads['lead_score'].scoring_criteria}"
+            )
+
+        # Present options to the user
+        print("\nPlease choose an option:")
+        print("1. Quit")
+        print("2. Redo lead scoring with additional feedback")
+        print("3. Proceed with writing emails to all leads")
+
+        choice = input("Enter the number of your choice: ")
+
+        if choice == "1":
+            print("Exiting the program.")
+            exit()
+
+        elif choice == "2":
+            feedback = input("\nPlease provide additional feedback on what you're looking for in your leads:\n")
+            if feedback:
+                self.state["scored_leads_feedback"] = feedback
+                print("\nRe-running lead scoring with your feedback...")
+                return "scored_leads_feedback"
+        
+        elif choice == "3":
+            print("\nProceeding to write emails to all leads.")
+            return "generate_emails"
+        
+        else:
+            print("\nInvalid choice. Please try again.")
+            return "human_in_the_loop"
+
+    @listen("generate_emails")
     def write_email(self, leads):
+        st.session_state.progress.progress(70, text='Writing Email')  # Progress update
         scored_leads = [lead.to_dict() for lead in leads]
         emails = email_writing_crew.kickoff_for_each(scored_leads)
-        #self.state.leads = leads
         return emails
 
     @listen(write_email)
     def send_email(self, emails):
-      """
-      Sends an email with the given content to the specified recipient.
-
-      :param email_content: The content of the email (string).
-      :param recipient_email: The recipient's email address (string).
-      """
-      # for index, email in emails:
-      #   email_content = email[index]
-      #   lead = self.state.leads[index]["lead_data"].email
-      #   # Email configuration
-      #   smtp_server = 'smtp.gmail.com'
-      #   port = 587  # SMTP port for TLS
-      #   sender_email = 'adamelshimi@sensai-consulting.com'
-      #   sender_password = 'gldg ncwg kivt ofoq'
-
-      #   # Email subject
-      #   subject = f'Email - {lead}'
-
-      #   # Construct the email message
-      #   msg = EmailMessage()
-      #   msg['Subject'] = subject
-      #   msg['From'] = sender_email
-      #   msg['To'] = "adamelshimi@gmail.com"
-      #   msg.set_content(email_content)
-
-      #   # Send the email
-      #   try:
-      #       # Connect to the SMTP server
-      #       with smtplib.SMTP(smtp_server, port) as server:
-      #           server.starttls()  # Secure the connection
-      #           server.login(sender_email, sender_password)  # Login to your email account
-      #           server.send_message(msg)  # Send the email
-      #       print(f"Email sent successfully to {lead}!")
-      #   except Exception as e:
-      #       print(f"Failed to send email: {e}")
-
-      return emails
-
-if __name__ == "__main__":
-    flow = SalesPipeline()
-    emails = flow.kickoff()
+        st.session_state.progress.progress(100, text='Email Complete')  # Completion
+        return emails
 # End of program

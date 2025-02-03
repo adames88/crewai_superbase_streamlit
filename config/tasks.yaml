@@ -130,4 +130,4 @@ database_query:
     Lead Score: {lead_score}
 
   expected_output: >
-    you are to insert the new lead information into supabase database.
+    you are to insert or update the new lead information into supabase database.
