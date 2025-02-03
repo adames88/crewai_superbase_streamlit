@@ -93,12 +93,13 @@ class StreamToExpander:
         # Filter out ANSI escape codes using a regular expression
         cleaned_data = re.sub(r'\x1B\[[0-9;]*[mK]', '', data)
 
-        # Find URLs in the cleaned data
-        url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+(?:/[^"\s<>]*)?(?:\?[^"\s<>]*)?(?:#[^"\s<>]*)?'
+        # More comprehensive URL pattern that handles various URL formats
+        url_pattern = r'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»""'']))'
         urls = re.findall(url_pattern, cleaned_data)
         if urls:
-            # Add new URLs to the session state list if they're not already there
-            st.session_state.captured_urls.extend([url for url in urls if url not in st.session_state.captured_urls])
+            # Extract the full URL from the match tuples and add to session state
+            new_urls = [url[0] for url in urls if url[0] not in st.session_state.captured_urls]
+            st.session_state.captured_urls.extend(new_urls)
         # Check if the data contains 'task' information
         task_match_object = re.search(r'\"task\"\s*:\s*\"(.*?)\"', cleaned_data, re.IGNORECASE)
         task_match_input = re.search(r'task\s*:\s*([^\n]*)', cleaned_data, re.IGNORECASE)
