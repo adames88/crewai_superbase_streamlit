@@ -21,3 +21,8 @@ def get_supabase_key():
     load_env()
     supabase_key = os.getenv("SUPERBASE_KEY")
     return supabase_key
+
+def get_serper_api_key():
+    load_env()
+    serper_api_key = os.getenv("SERPER_API_KEY")
+    return serper_api_key
