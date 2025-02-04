@@ -22,13 +22,13 @@ from superbase_tools import (
     supabase_delete_row_tool, 
     supabase_update_tool
 )
-from helper import load_env, get_supabase_url, get_supabase_key
+from helper import load_env, get_supabase_url, get_supabase_key, get_serper_api_key
 import os
 load_env()
 
 url: str = os.getenv("SUPERBASE_URL")
 key: str = os.getenv("SUPERBASE_KEY")
-os.environ['SERPER_API_KEY'] = os.getenv("SERPER_API_KEY")
+os.environ['SERPER_API_KEY'] = get_serper_api_key()
 
 logging.basicConfig(level=logging.DEBUG)
 
