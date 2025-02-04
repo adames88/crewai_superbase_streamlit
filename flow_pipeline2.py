@@ -28,7 +28,7 @@ load_env()
 
 url: str = os.getenv("SUPERBASE_URL")
 key: str = os.getenv("SUPERBASE_KEY")
-os.environ['SERPER_API_KEY'] = get_serper_api_key()
+get_serper_api_key()
 
 logging.basicConfig(level=logging.DEBUG)
 
