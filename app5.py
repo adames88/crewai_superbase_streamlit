@@ -15,6 +15,7 @@ import textwrap
 
 # Set OpenAI Model
 os.environ['OPENAI_MODEL_NAME'] = 'gpt-4o-mini'
+os.environ['SERPER_API_KEY'] = os.getenv("SERPER_API_KEY")
 
 # Initialize the SalesPipeline
 flow = SalesPipeline()
