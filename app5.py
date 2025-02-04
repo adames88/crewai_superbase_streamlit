@@ -1,7 +1,7 @@
 __import__('pysqlite3')
 import sys
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-from helper import load_env
+from helper import load_env, get_serper_api_key
 load_env()
 import streamlit as st
 import os
@@ -15,7 +15,7 @@ import textwrap
 
 # Set OpenAI Model
 os.environ['OPENAI_MODEL_NAME'] = 'gpt-4o-mini'
-os.environ['SERPER_API_KEY'] = os.getenv("SERPER_API_KEY")
+os.environ['SERPER_API_KEY'] = get_serper_api_key()
 
 # Initialize the SalesPipeline
 flow = SalesPipeline()
