@@ -22,7 +22,6 @@ from superbase_tools import (
 )
 from helper import load_env, get_supabase_url, get_supabase_key, get_serper_api_key
 import os
-from crewai import LLM
 load_env()
 
 url: str = os.getenv("SUPERBASE_URL")

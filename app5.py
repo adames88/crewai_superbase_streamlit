@@ -1,6 +1,6 @@
-#__import__('pysqlite3')
+__import__('pysqlite3')
 import sys
-#sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 from helper import load_env, get_serper_api_key
 load_env()
 import streamlit as st
