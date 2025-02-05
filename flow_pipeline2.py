@@ -24,10 +24,6 @@ from helper import load_env, get_supabase_url, get_supabase_key, get_serper_api_
 import os
 from crewai import LLM
 
-llm = LLM(
-    model="gpt-4o-mini"
-)
-
 #load_env()
 
 url: str = os.getenv("SUPERBASE_URL")
@@ -157,21 +153,21 @@ class StreamToExpander:
 lead_data_agent = Agent(
   config=agents_config['lead_data_agent'],
   tools=[search_tool, ScrapeWebsiteTool()],
-  llm=llm,
+  llm="gpt-4o-mini",
   step_callback=StreamToExpander
 )
 
 cultural_fit_agent = Agent(
   config=agents_config['cultural_fit_agent'],
   tools=[search_tool, ScrapeWebsiteTool()],
-  llm=llm,
+  llm="gpt-4o-mini",
   step_callback=StreamToExpander
 )
 
 scoring_validation_agent = Agent(
   config=agents_config['scoring_validation_agent'],
   tools=[search_tool, ScrapeWebsiteTool()],
-  llm=llm,
+  llm="gpt-4o-mini",
   step_callback=StreamToExpander
 )
 
@@ -212,13 +208,13 @@ lead_scoring_crew = Crew(
 # Creating Agents
 email_content_specialist = Agent(
   config=agents_config['email_content_specialist'],
-  llm=llm,
+  llm="gpt-4o-mini",
   step_callback=StreamToExpander
 )
 
 engagement_strategist = Agent(
   config=agents_config['engagement_strategist'],
-  llm=llm,
+  llm="gpt-4o-mini",
   step_callback=StreamToExpander
 )
 
@@ -249,7 +245,7 @@ email_writing_crew = Crew(
 superbase_agent = Agent(
   config=agents_config['superbase_agent'],
   tools=[get_row_tool,get_all_rows,insert_row,delete_row,update_row],
-  llm=llm,
+  llm="gpt-4o-mini",
   step_callback=StreamToExpander,
   #knowledge_sources=[text_knowledge],
 )
