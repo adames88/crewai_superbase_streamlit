@@ -22,17 +22,17 @@ from superbase_tools import (
     supabase_delete_row_tool, 
     supabase_update_tool
 )
-from crewai_tools import SpiderTool
 from helper import load_env, get_supabase_url, get_supabase_key, get_serper_api_key
 import os
 load_env()
 
 url: str = os.getenv("SUPERBASE_URL")
 key: str = os.getenv("SUPERBASE_KEY")
-get_serper_api_key()
+os.environ["SERPER_API_KEY"] = get_serper_api_key()
+search_tool = SerperDevTool()
+
 
 logging.basicConfig(level=logging.DEBUG)
-
 
 # Create instances of the tools
 get_row_tool = supabase_get_row_tool.SupabaseGetRowTool()  # Instantiate the tool
@@ -152,19 +152,19 @@ class StreamToExpander:
 # Creating Agents
 lead_data_agent = Agent(
   config=agents_config['lead_data_agent'],
-  tools=[SerperDevTool(), ScrapeWebsiteTool()],
+  tools=[search_tool, ScrapeWebsiteTool()],
   step_callback=StreamToExpander
 )
 
 cultural_fit_agent = Agent(
   config=agents_config['cultural_fit_agent'],
-  tools=[SerperDevTool(), ScrapeWebsiteTool()],
+  tools=[search_tool, ScrapeWebsiteTool()],
   step_callback=StreamToExpander
 )
 
 scoring_validation_agent = Agent(
   config=agents_config['scoring_validation_agent'],
-  tools=[SerperDevTool(), ScrapeWebsiteTool()],
+  tools=[search_tool, ScrapeWebsiteTool()],
   step_callback=StreamToExpander
 )
 
