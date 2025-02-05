@@ -1,6 +1,6 @@
-__import__('pysqlite3')
+#__import__('pysqlite3')
 import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+#sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 from helper import load_env, get_serper_api_key
 load_env()
 import streamlit as st
@@ -13,9 +13,7 @@ from flow_pipeline2 import StreamToExpander
 import sys
 import textwrap
 
-# Set a default model
-if "openai_model" not in st.session_state:
-    st.session_state["openai_model"] = "gpt-4o-mini"
+
 # Set OpenAI Model
 os.environ['OPENAI_MODEL_NAME'] = 'gpt-4o-mini'
 # Initialize the SalesPipeline

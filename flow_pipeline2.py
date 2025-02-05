@@ -22,11 +22,11 @@ from superbase_tools import (
 )
 from helper import load_env, get_supabase_url, get_supabase_key, get_serper_api_key
 import os
-load_env()
+#load_env()
 
 url: str = os.getenv("SUPERBASE_URL")
 key: str = os.getenv("SUPERBASE_KEY")
-get_serper_api_key()
+#get_serper_api_key()
 search_tool = SerperDevTool()
 
 
