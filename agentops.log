@@ -1,14 +1,4 @@
-2025-02-03 14:32:25,240 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
-2025-02-03 14:32:27,741 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
-2025-02-03 14:32:41,191 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
-2025-02-03 14:32:45,315 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
-2025-02-03 14:32:48,362 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
-2025-02-03 14:33:01,302 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
-2025-02-03 14:33:08,277 - WARNING - Could not end session - no sessions detected
-2025-02-03 14:33:10,883 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
-2025-02-03 14:33:16,678 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
-2025-02-03 14:33:17,112 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
-2025-02-03 14:33:20,471 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
-2025-02-03 14:33:23,167 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
-2025-02-03 14:33:26,849 - WARNING - Could not end session - no sessions detected
-2025-02-03 14:33:32,324 - WARNING - Could not end session - no sessions detected
+2025-02-05 23:13:10,134 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
+2025-02-05 23:13:12,805 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
+2025-02-05 23:13:17,663 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
+2025-02-05 23:13:20,175 - WARNING - Could not record event - no sessions detected. Create a session by calling agentops.start_session()
