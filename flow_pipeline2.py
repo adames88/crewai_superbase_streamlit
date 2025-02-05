@@ -1,5 +1,4 @@
 from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task, before_kickoff, after_kickoff
 from crewai_tools import SerperDevTool, ScrapeWebsiteTool
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Dict, Optional, List, Set, Tuple
@@ -12,7 +11,6 @@ import logging
 import re
 import pandas as pd
 import streamlit as st
-import smtplib
 from email.message import EmailMessage
 import time 
 from superbase_tools import (
@@ -28,7 +26,7 @@ load_env()
 
 url: str = os.getenv("SUPERBASE_URL")
 key: str = os.getenv("SUPERBASE_KEY")
-os.environ["SERPER_API_KEY"] = get_serper_api_key()
+get_serper_api_key()
 search_tool = SerperDevTool()
 
 
