@@ -22,6 +22,7 @@ from superbase_tools import (
     supabase_delete_row_tool, 
     supabase_update_tool
 )
+from crewai_tools import SpiderTool
 from helper import load_env, get_supabase_url, get_supabase_key, get_serper_api_key
 import os
 load_env()
