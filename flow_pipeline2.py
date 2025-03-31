@@ -147,6 +147,10 @@ class StreamToExpander:
             self.expander.markdown(''.join(self.buffer), unsafe_allow_html=True)
             self.buffer = []
 
+    def flush(self):
+        pass  # Required for compatibility with rich.Console
+
+
 # Creating Agents
 lead_data_agent = Agent(
   config=agents_config['lead_data_agent'],
